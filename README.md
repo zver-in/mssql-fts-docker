@@ -1,12 +1,24 @@
 # mssql-fts-docker
 
-A SQL Server 2022 Docker image based on the official Microsoft image with the `mssql-server-fts` package preinstalled to enable Full-Text Search.
+Custom SQL Server 2017 Docker image based on the official Microsoft image with:
+
+- `mssql-server-fts` preinstalled
+- automatic `COMPATIBILITY_LEVEL = 130` for all user databases
+
+This setup is intended as a practical approximation of SQL Server 2016 behavior for local development and testing while still using an official Linux container image.
 
 ## What's Included
 
-- Base image: `mcr.microsoft.com/mssql/server:2022-CU16-ubuntu-22.04`
-- Includes the `mssql-server-fts` package
-- Switches back to the default `mssql` user after installation
+- Base image: `mcr.microsoft.com/mssql/server:2017-latest`
+- Full-Text Search via `mssql-server-fts`
+- `sqlcmd` via `mssql-tools`
+- Custom entrypoint that waits for SQL Server to start and sets `COMPATIBILITY_LEVEL = 130` on all user databases
+
+System databases are not modified.
+
+## Why Compatibility Level 130
+
+`130` is the compatibility level used by SQL Server 2016. This does not make SQL Server 2017 identical to SQL Server 2016, but it helps align database behavior more closely with a SQL Server 2016 production environment.
 
 ## Build
 
@@ -16,7 +28,7 @@ docker build -t mssql-fts .
 
 ## Run
 
-Example container startup command:
+Example startup command:
 
 ```bash
 docker run -d \
@@ -27,7 +39,7 @@ docker run -d \
   mssql-fts
 ```
 
-If you need persistent data, add a volume:
+If you need persistent data:
 
 ```bash
 docker run -d \
@@ -39,9 +51,9 @@ docker run -d \
   mssql-fts
 ```
 
-## Verify Full-Text Search
+The compatibility adjustment script supports both `MSSQL_SA_PASSWORD` and `SA_PASSWORD`, but `MSSQL_SA_PASSWORD` is the recommended variable to pass at container startup.
 
-After the container starts, you can verify that the component is available:
+## Verify Full-Text Search
 
 ```sql
 SELECT FULLTEXTSERVICEPROPERTY('IsFullTextInstalled') AS IsFullTextInstalled;
@@ -49,15 +61,37 @@ SELECT FULLTEXTSERVICEPROPERTY('IsFullTextInstalled') AS IsFullTextInstalled;
 
 Expected value: `1`.
 
-Example using `sqlcmd` inside the container:
+Example:
 
 ```bash
-docker exec -it mssql-fts /opt/mssql-tools18/bin/sqlcmd \
+docker exec -it mssql-fts /opt/mssql-tools/bin/sqlcmd \
   -S localhost \
   -U sa \
   -P 'YourStrong!Passw0rd' \
-  -C \
   -Q "SELECT FULLTEXTSERVICEPROPERTY('IsFullTextInstalled') AS IsFullTextInstalled;"
+```
+
+## Verify Compatibility Level
+
+To check user database compatibility levels:
+
+```sql
+SELECT name, compatibility_level
+FROM sys.databases
+WHERE database_id > 4
+ORDER BY name;
+```
+
+Expected value for user databases: `130`.
+
+Example:
+
+```bash
+docker exec -it mssql-fts /opt/mssql-tools/bin/sqlcmd \
+  -S localhost \
+  -U sa \
+  -P 'YourStrong!Passw0rd' \
+  -Q "SELECT name, compatibility_level FROM sys.databases WHERE database_id > 4 ORDER BY name;"
 ```
 
 ## Requirements
@@ -76,6 +110,8 @@ The repository includes the workflow [`.github/workflows/publish.yml`](/Users/iv
 
 To publish, GitHub Actions must be enabled for the repository. Authentication uses the built-in `GITHUB_TOKEN` with `packages: write` permission.
 
-## Purpose
+## Limitations
 
-This repository is useful when you need a ready-to-use SQL Server 2022 container with Full-Text Search support enabled without manually installing packages on each run.
+- This image uses SQL Server 2017, not SQL Server 2016.
+- `COMPATIBILITY_LEVEL = 130` improves compatibility, but it does not fully reproduce SQL Server 2016 engine behavior.
+- If a new user database appears after startup, the container will update its compatibility level on the next background check.
