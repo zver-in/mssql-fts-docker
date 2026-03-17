@@ -7,7 +7,6 @@ USER root
 RUN set -eux; \
     . /etc/os-release; \
     ubuntu_version="${VERSION_ID}"; \
-    major_version="${ubuntu_version%%.*}"; \
     \
     # Update the package list and install tools required to add the Microsoft repository
     apt-get update; \
@@ -18,7 +17,7 @@ RUN set -eux; \
       | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg; \
     curl -fsSL "https://packages.microsoft.com/config/ubuntu/${ubuntu_version}/mssql-server-2017.list" \
       -o /etc/apt/sources.list.d/mssql-server-2017.list; \
-    curl -fsSL "https://packages.microsoft.com/config/ubuntu/${major_version}/prod.list" \
+    curl -fsSL "https://packages.microsoft.com/config/ubuntu/${ubuntu_version}/prod.list" \
       -o /etc/apt/sources.list.d/msprod.list; \
     sed -i 's|^deb \[|deb [signed-by=/usr/share/keyrings/microsoft-prod.gpg |' \
       /etc/apt/sources.list.d/mssql-server-2017.list \
