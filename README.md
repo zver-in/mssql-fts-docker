@@ -26,6 +26,12 @@ System databases are not modified.
 docker build -t mssql-fts .
 ```
 
+If you want a local versioned build, tag it explicitly:
+
+```bash
+docker build -t ghcr.io/<owner>/mssql-fts-docker:1.0.0 .
+```
+
 ## Run
 
 Example startup command:
@@ -104,11 +110,46 @@ docker exec -it mssql-fts /opt/mssql-tools/bin/sqlcmd \
 
 The repository includes the workflow [`.github/workflows/publish.yml`](/Users/ivan/src/mssql-fts-docker/.github/workflows/publish.yml), which publishes the image to `ghcr.io/<owner>/<repo>`.
 
-- On pushes to `main` or `master`, it publishes the branch tag and also `latest` for the default branch
+- On pushes to `main` or `master`, it publishes the branch tag, a short commit tag such as `sha-abc1234`, and also `latest` for the default branch
 - On pushes of tags matching `v*`, it publishes release tags such as `v1.0.0`, `1.0.0`, and `1.0`
 - The workflow can also be started manually with `workflow_dispatch`
 
 To publish, GitHub Actions must be enabled for the repository. Authentication uses the built-in `GITHUB_TOKEN` with `packages: write` permission.
+
+## Image Versioning
+
+The published image is versioned by git tags, not by a version hardcoded in [Dockerfile](/Users/ivan/src/mssql-fts-docker/Dockerfile).
+
+Recommended release format:
+
+- `vMAJOR.MINOR.PATCH`, for example `v1.0.0`
+
+When you push a release tag such as `v1.2.3`, the workflow publishes these image tags:
+
+- `ghcr.io/<owner>/<repo>:v1.2.3`
+- `ghcr.io/<owner>/<repo>:1.2.3`
+- `ghcr.io/<owner>/<repo>:1.2`
+
+On regular branch pushes, the workflow also publishes:
+
+- the branch name, for example `main`
+- a short immutable commit tag, for example `sha-abc1234`
+- `latest` on the default branch
+
+Release flow:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+After that, the image can be pulled by the release tag:
+
+```bash
+docker pull ghcr.io/<owner>/<repo>:1.0.0
+```
+
+This approach keeps release versions stable and human-readable while still providing an immutable commit-based tag for every published build.
 
 ## Limitations
 
