@@ -37,7 +37,14 @@ RUN set -eux; \
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY set-compatibility-level.sh /usr/local/bin/set-compatibility-level.sh
 
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/set-compatibility-level.sh
+RUN set -eux; \
+    mkdir -p /var/opt/mssql/.system; \
+    chown -R mssql:mssql /var/opt/mssql; \
+    chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/set-compatibility-level.sh
+
+ENV HOME=/var/opt/mssql
+
+WORKDIR /var/opt/mssql
 
 # Switch back to the default SQL Server user
 USER mssql

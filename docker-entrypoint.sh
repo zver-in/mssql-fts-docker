@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export HOME="${HOME:-/var/opt/mssql}"
+mkdir -p "${HOME}/.system"
+cd "${HOME}"
+
 /opt/mssql/bin/sqlservr &
 sqlservr_pid=$!
 

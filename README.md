@@ -7,12 +7,15 @@ Custom SQL Server 2017 Docker image based on the official Microsoft image with:
 
 This setup is intended as a practical approximation of SQL Server 2016 behavior for local development and testing while still using an official Linux container image.
 
+The image is configured to run as the non-root `mssql` user and stores SQL Server service files under `/var/opt/mssql`, not under the filesystem root.
+
 ## What's Included
 
 - Base image: `mcr.microsoft.com/mssql/server:2017-latest`
 - Full-Text Search via `mssql-server-fts`
 - `sqlcmd` via `mssql-tools`
 - Custom entrypoint that waits for SQL Server to start and sets `COMPATIBILITY_LEVEL = 130` on all user databases
+- `HOME=/var/opt/mssql` and `WORKDIR /var/opt/mssql` so SQL Server does not try to create `/.system`
 
 System databases are not modified.
 
@@ -45,6 +48,8 @@ docker run -d \
   mssql-fts
 ```
 
+The container does not need to run as `root` and does not require write permissions on `/`.
+
 If you need persistent data:
 
 ```bash
@@ -58,6 +63,15 @@ docker run -d \
 ```
 
 The compatibility adjustment script supports both `MSSQL_SA_PASSWORD` and `SA_PASSWORD`, but `MSSQL_SA_PASSWORD` is the recommended variable to pass at container startup.
+
+## Non-Root Startup
+
+SQL Server may try to create a hidden `/.system` directory if the process starts without a writable home directory. This image avoids that by setting:
+
+- `HOME=/var/opt/mssql`
+- `WORKDIR /var/opt/mssql`
+
+The entrypoint also ensures `${HOME}/.system` exists before starting `sqlservr`, so the container starts cleanly in CI and in Testcontainers without granting write access to `/` or switching to a privileged user.
 
 ## Verify Full-Text Search
 
